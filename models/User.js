@@ -13,4 +13,4 @@ const userSchema = new mongoose.Schema({
     day: { type: String, required: true }
 });
 
-export default mongoose.model("Sport", userSchema);
+export default mongoose.model("StudentSport", userSchema);
