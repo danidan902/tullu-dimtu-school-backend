@@ -4,7 +4,7 @@ export const createUser = async (req, res) => {
   try {
     console.log('📥 Received request body:', req.body);
     
-    const { name, email, password } = req.body; // Changed from 'message' to 'password'
+    const { name, email, password } = req.body;
     
     // Validate required fields
     if (!name || !email || !password) {
@@ -18,7 +18,7 @@ export const createUser = async (req, res) => {
     const newUser = new User({ 
       name, 
       email, 
-      password // Changed from 'message' to 'password'
+      password
     });
     
     await newUser.save();
@@ -45,7 +45,8 @@ export const createUser = async (req, res) => {
     
     if (err.code === 11000) {
       return res.status(400).json({
-        error: "Email already exists"
+        error: "Email already exists",
+        details: "This email is already registered. Please use a different email address."
       });
     }
     

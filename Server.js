@@ -9,14 +9,15 @@ import sportRoutes from './routes/SportRouter.js'
 import counsleRoute from './routes/CounsleRoute.js'
 import router from './routes/RouteUser.js';
 
-
-const PORT = process.env.PORT || 5001; 
+const PORT = process.env.PORT || 5000; 
 const app = express();  
 
 app.use(express.json());   
+
+// Fixed CORS configuration
 app.use(cors({
-  origin: "https://tuludimtuschool.vercel.app",
-  methods: ["GET", "POST", "OPTIONS"],
+  origin: ["http://localhost:3000", "https://tuludimtuschool.vercel.app"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"], 
   credentials: true
 }));
@@ -28,8 +29,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api', schoolRoutes);
 app.use('/api', sportRoutes);
 app.use('/api/concerns', counsleRoute);
-app.use('/api/users', router)
-
+app.use('/api/users', router);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port: ${PORT}`);
