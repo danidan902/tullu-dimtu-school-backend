@@ -25,7 +25,56 @@ app.use(cors({
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ Mongo is connected successfully!'))
   .catch((err) => console.error('❌ Mongo connection failed!', err));
-     
+
+// 🔥 ADD THESE HEALTH CHECK ROUTES
+app.get('/api/users/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Users API is healthy',
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
+  });
+});
+
+app.get('/api/users/test', (req, res) => {
+  res.status(200).json({ 
+    message: 'Users test endpoint is working!',
+    success: true,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Backend server is running',
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
+  });
+});
+
+app.get('/api/test', (req, res) => {
+  res.status(200).json({ 
+    message: 'Backend test endpoint is working!',
+    success: true,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'Tullu Dimtu School Backend Server',
+    status: 'Running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      users: '/api/users',
+      health: '/api/health',
+      test: '/api/test'
+    }
+  });
+});
+
+// Your existing routes
 app.use('/api', schoolRoutes);
 app.use('/api', sportRoutes);
 app.use('/api/concerns', counsleRoute);
