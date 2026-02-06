@@ -3,27 +3,30 @@ import dotenv from 'dotenv';
 dotenv.config(); 
 import express from 'express';
 import cors from 'cors';
-import mongoose from 'mongoose';
+import mongoose from 'mongoose'; 
 import schoolRoutes from './routes/SchoolRoute.js';
 import sportRoutes from './routes/SportRouter.js';
 import counsleRoute from './routes/CounsleRoute.js';
 import router from './routes/RouteUser.js';
 import teacherRoutes from "./routes/teacherRoutes.js";
 import fileRoutes from './routes/fileRoutes.js';
-import nodemailer from "nodemailer";
 import twilio from "twilio";
 import { Server } from 'socket.io';
 import { createServer } from 'http';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import materialRoutes from './routes/materials.js';
 import uploadRoutes from './routes/uploads.js';
 import visitRoutes from './routes/visitorRoutes.js'
 import registrationRoutes from './routes/registrationRoutes.js';
 import admissionRoutes from './routes/admissionRoutes.js'
 import cloudinary  from 'cloudinary'
-import emailAuthOtp from './routes/Otp.js'
-   
+
+import postRoutes from './routes/posts.js'
+import authRoutes from './routes/authRoutes.js'
+import emailRoutes from './routes/LibraryRoute.js'
+import techEmailRoute from './routes/TeacherRouteEmail.js'
+import uploadRoute from './routes/UploadsTeacherA.js';
+import adminRoute from './routes/adminRoute.js'
+
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
@@ -132,6 +135,13 @@ app.use('/api', schoolRoutes);
 app.use('/api', sportRoutes);
 app.use('/api/concerns', counsleRoute);
 app.use('/api/users', router);
+app.use('/api/posts', postRoutes);
+app.use('/api/auth', authRoutes);
+app.use("/api/auths", emailRoutes);
+app.use("/api/techs", techEmailRoute)
+app.use('/api/upload', uploadRoute);
+app.use('/api/admin', adminRoute);
+
 
 
 app.use('/api/files', fileRoutes);
@@ -395,298 +405,12 @@ app.get("/api/health", (req, res) => {
 });
 
 
-const userSchema = new mongoose.Schema({
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true
-    },
-    password: {
-        type: String,
-        required: true
-    },
-   
-    isVerified: {
-        type: Boolean,
-        default: false
-    },
-    verificationCode: String,
-    verificationCodeExpires: Date,
-    createdAt: {
-        type: Date,
-        default: Date.now
-    }
-});
-
-const User = mongoose.model('Email', userSchema);
-
-
-const transporter = nodemailer.createTransport({
-    service: 'gmail', // Or your email service
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
-
-
-function generateVerificationCode() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-
-async function sendVerificationEmail(email, verificationCode) {
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Tullu Dimtu School Email Verification Code',
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Email Verification</h2>
-                <p>Thank you for registering! Please use the following verification code to complete your registration:</p>
-                <div style="background-color: #f4f4f4; padding: 20px; text-align: center; margin: 20px 0;">
-                    <h1 style="color: #333; letter-spacing: 5px;">${verificationCode}</h1>
-                </div>
-                <p>This code will expire in 10 minutes.</p>
-                <p>If you didn't create an account, please ignore this email.</p>
-            </div>    
-        `
-    };
-
-    await transporter.sendMail(mailOptions);
-}
-
-
-app.post('/api/register', async (req, res) => {
-    try {
-        const { email, password, username } = req.body;
-
-     
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Email already registered' 
-            });
-        }
-
-      
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-       
-        const verificationCode = generateVerificationCode();
-        const verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-   
-        const newUser = new User({
-            email,
-            username,
-            password: hashedPassword,
-            verificationCode,
-            verificationCodeExpires
-        });
-
-        await newUser.save();
-
-
-        await sendVerificationEmail(email, verificationCode);
-
-        res.status(201).json({
-            success: true,
-            message: 'Registration successful! Please check your email for verification code.'
-        });
-
-    } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Server error during registration' 
-        });
-    }
-});
-
-// 2. Login
-app.post('/api/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        // Find user
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid credentials' 
-            });
-        }
-
-        // Check password
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid credentials' 
-            });
-        }
-
-        // Check if email is verified
-        if (!user.isVerified) {
-            return res.status(401).json({
-                success: false,
-                message: 'Please verify your email first',
-                requiresVerification: true
-            });     
-        }   
-
-        // Generate JWT token
-        const token = jwt.sign(
-            { userId: user._id, email: user.email },
-            process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            success: true,
-            message: 'Login successful',
-            token,
-            user: {
-                id: user._id,
-                email: user.email
-            }
-        });
-
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Server error during login' 
-        });
-    }
-});
-
-// 3. Verify Email
-app.post('/api/verify-email', async (req, res) => {
-    try {
-        const { email, verificationCode } = req.body;
-
-        const user = await User.findOne({ email });
-        
-        if (!user) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'User not found' 
-            }); 
-        }
-
-        // Check if already verified
-        if (user.isVerified) {
-            return res.json({ 
-                success: true, 
-                message: 'Email already verified' 
-            });
-        }
-
-        // Check verification code
-        if (!user.verificationCode || user.verificationCode !== verificationCode) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid verification code' 
-            });
-        }
-
-        // Check if code expired
-        if (user.verificationCodeExpires < new Date()) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Verification code has expired' 
-            });
-        }   
-        
-        // Update user as verified
-        user.isVerified = true;
-        user.verificationCode = undefined;
-        user.verificationCodeExpires = undefined;
-        await user.save();
-    
-        // Generate JWT token after verification
-        const token = jwt.sign(
-            { userId: user._id, email: user.email },
-            process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            success: true,
-            message: 'Email verified successfully!',
-            token,
-            user: {
-                id: user._id,
-                email: user.email
-            }
-        });
-
-    } catch (error) {
-        console.error('Verification error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Server error during verification' 
-        });
-    }
-});
-
-// 4. Resend Verification Code
-app.post('/api/resend-verification', async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        const user = await User.findOne({ email });
-        
-        if (!user) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'User not found' 
-            });
-        }
-
-        if (user.isVerified) {
-            return res.json({ 
-                success: true, 
-                message: 'Email already verified' 
-            });
-        }
-
-        // Generate new verification code
-        const verificationCode = generateVerificationCode();
-        const verificationCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
-
-        // Update user with new code
-        user.verificationCode = verificationCode;
-        user.verificationCodeExpires = verificationCodeExpires;
-        await user.save();
-
-        // Send new verification email
-        await sendVerificationEmail(email, verificationCode);
-
-        res.json({
-            success: true,
-            message: 'New verification code sent to your email'
-        });
-
-    } catch (error) {
-        console.error('Resend verification error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Server error' 
-        });
-    }
-});
-
-
 
 app.use('/api/visits', visitRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/admissions', admissionRoutes);
-app.use('/api/auth/email', emailAuthOtp);
+app.use('/api/posts', postRoutes);
+
 
 
 // Health check routes
@@ -697,6 +421,7 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
 
 
 
@@ -737,6 +462,33 @@ app.use((err, req, res, next) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Start server
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port: http://localhost:${PORT}`);
@@ -746,6 +498,8 @@ server.listen(PORT, () => {
     console.log(`   MongoDB URI: ${process.env.MONGODB_URI ? 'Configured' : 'Missing'}`);
   console.log(`   Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME ? 'Configured' : 'Missing'}`);
   console.log(`   App Name: ${process.env.APP_NAME || 'Not set'}`);
+   console.log(`👥 Authors API: http://localhost:${PORT}/api/authors`);
+    console.log(`📰 News API: http://localhost:${PORT}/api/news`);
 
   console.log('=== ENVIRONMENT CHECK ===');
 console.log('EMAIL_USER exists:', !!process.env.EMAIL_USER);
@@ -762,7 +516,4 @@ console.log('=========================');
 
 
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port: ${PORT}`);
-});
 
