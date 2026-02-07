@@ -27,12 +27,13 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// Multer configuration
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB per file
-    files: 8 // ✅ FIXED
+    fileSize: 1 * 1024 * 1024, // ✅ 1MB per file
+    files: 8                   // ✅ maximum 8 files per student
   }
 });
 
