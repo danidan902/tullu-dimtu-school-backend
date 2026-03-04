@@ -16,16 +16,16 @@ const createAdmins = async () => {
     const admin1 = new Admin({
       email: 'badasawadajo@gmail.com',
       password: 'badasa@1234',
-      name: 'Director Badasa',
+      name: 'director',
       role: 'director'
     });
 
 
     const admin2 = new Admin({
-      email: 'danidan@gmail.com',
-      password: 'dani1234',
-      name: 'Student',
-      role: 'student'
+      email: 'taeralamessa@gmail.com',
+      password: 'taera@2122',
+      name: 'teacher',
+      role: 'teacher'
     });
 
      const admin3 = new Admin({
