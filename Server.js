@@ -68,17 +68,17 @@ app.use(cors({
   credentials: true
 }));
 
-// mongoose.connect(process.env.MONGO_URI)
-//   .then(() => console.log('✅ Mongo is connected successfully!'))
-//   .catch((err) => console.error('❌ Mongo connection failed!', err));
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('✅ Mongo is connected successfully!'))
+  .catch((err) => console.error('❌ Mongo connection failed!', err));
 
 
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('✅ Mongo is connected successfully!'))
-.catch((err) => console.error('❌ Mongo connection failed!', err));
+// mongoose.connect(process.env.MONGODB_URI, {
+//   useNewUrlParser: true,
+//   useUnifiedTopology: true
+// })
+// .then(() => console.log('✅ Mongo is connected successfully!'))
+// .catch((err) => console.error('❌ Mongo connection failed!', err));
 
 
 // 🔥 ADD THESE HEALTH CHECK ROUTES
